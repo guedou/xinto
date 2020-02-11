@@ -5,6 +5,9 @@ use std::io::prelude::*; // used to get the BufRead trait
 use std::io::BufReader;
 use std::path::Path;
 
+extern crate err_derive;
+use err_derive::Error;
+
 extern crate hex;
 use hex::FromHex;
 
@@ -51,20 +54,53 @@ pub struct Record {
     pub checksum: u8,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Error)]
 pub enum RecordParsingError {
+    #[error(display = "record too small")]
     TooSmall,
+    #[error(display = "missing record mark")]
     MissingTag,
+    #[error(display = "invalid length format")]
     InvalidLengthFormat,
+    #[error(display = "invalid length")]
     InvalidLength,
+    #[error(display = "invalid load offset format")]
     InvalidLoadOffsetFormat,
+    #[error(display = "invalid type")]
     InvalidType,
+    #[error(display = "invalid type format")]
     InvalidTypeFormat,
+    #[error(display = "invalid data format")]
     InvalidDataFormat,
+    #[error(display = "invalid checksum")]
     InvalidChecksum,
+    #[error(display = "invalid checksum format")]
     InvalidChecksumFormat,
+    #[error(display = "record too large")]
     TooLarge,
+    #[error(display = "invalid hex integer")]
     ParseIntError,
+}
+
+#[derive(Debug, Error)]
+pub enum FileParsingError<'a> {
+    #[error(display = "'{}' is not a valid file", _0)]
+    InvalidFile(&'a str),
+    #[error(display = "cannot open '{}'", _0)]
+    ReadFileError(&'a str),
+    #[error(display = "IO error at line {}", _0)]
+    IOError(usize),
+    #[error(display = "at line {}: {}", line_number, error)]
+    RecordError {
+        error: RecordParsingError,
+        line_number: usize,
+    },
+}
+
+impl<'a> From<FileParsingError<'a>> for String {
+    fn from(error: FileParsingError) -> Self {
+        error.to_string()
+    }
 }
 
 impl Record {
@@ -142,37 +178,26 @@ impl Record {
         sum.trailing_zeros() >= 8
     }
 
-    pub fn from_file(filename: &str) -> Result<Vec<Record>, String> {
+    pub fn from_file(filename: &str) -> Result<Vec<Record>, FileParsingError> {
         // Check if the file exists
         if !Path::new(filename).is_file() {
-            return Err(format!("'{}' is not a valid file!", filename));
+            return Err(FileParsingError::InvalidFile(filename));
         }
 
         // Check if the file can be opened
         let file = File::open(filename);
         if file.is_err() {
-            return Err(format!("cannot open '{}'", filename));
+            return Err(FileParsingError::ReadFileError(filename));
         }
 
         let mut records = vec![];
         let buf_reader = BufReader::new(file.unwrap());
 
         for (line_number, line) in buf_reader.lines().enumerate().map(|(ln, l)| (ln + 1, l)) {
-            if line.is_err() {
-                return Err(format!("IO error at line {}: '{:?}'!", line_number, line));
-            }
+            let line = line.or_else(|_| Err(FileParsingError::IOError(line_number)))?;
 
-            let record = match Record::parse(&line.unwrap()) {
-                Ok(r) => r,
-                Err(RecordParsingError::MissingTag) => {
-                    eprintln!("Error at line {}: missing record mark!", line_number);
-                    break;
-                }
-                Err(e) => {
-                    eprintln!("Error at line {}: {:?}", line_number, e);
-                    break;
-                }
-            };
+            let record = Record::parse(&line)
+                .or_else(|error| Err(FileParsingError::RecordError { error, line_number }))?;
 
             records.push(record);
         }
