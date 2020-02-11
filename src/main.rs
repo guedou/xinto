@@ -11,13 +11,25 @@ extern crate serde;
 extern crate serde_json;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Record {
     length: u8,
     load_offset: u16,
     r#type: u8,
     data: Vec<u8>,
     checksum: u8,
+}
+
+impl Record {
+    pub fn end_of_file() -> Self {
+        Record {
+            length: 0,
+            load_offset: 0,
+            r#type: 1,
+            data: vec![],
+            checksum: 0xFF,
+        }
+    }
 }
 
 fn u8_from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
@@ -149,6 +161,14 @@ fn main() -> Result<(), u8> {
         };
         v.push(record);
     }
+
+    if !v.is_empty() {
+        if *v.last().unwrap() != Record::end_of_file() {
+            eprintln!("Error: last record is not a \"End of File Record\"!");
+            return Err(1);
+        }
+    }
+
     println!("{}", serde_json::to_string(&v).or_else(|_| Err(3))?);
     Ok(())
 }
@@ -199,7 +219,7 @@ mod tests {
         let result = parse_record(":0000000000aa");
         assert!(result.err() == Some(RecordParsingError::TooLarge));
 
-        // Valid Record
+        // Valid record
         let result = parse_record(":10010000214601360121470136007EFE09D2190140");
         if result.is_err() {
             assert!(false);
