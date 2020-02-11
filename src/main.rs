@@ -16,7 +16,8 @@ fn main() -> Result<(), u8> {
         .arg(
             Arg::with_name("HEX_FILENAME")
                 .help("hex file to convert")
-                .required(true))
+                .required(true),
+        )
         .get_matches();
 
     // Check if the file exists
@@ -45,12 +46,9 @@ fn main() -> Result<(), u8> {
         v.push(record);
     }
 
-  
-    if !v.is_empty() {
-        if *v.last().unwrap() != Record::end_of_file() {
-            eprintln!("Error: last record is not a \"End of File Record\"!");
-            return Err(1);
-	}
+    if !v.is_empty() && *v.last().unwrap() != Record::end_of_file() {
+        eprintln!("Error: last record is not a \"End of File Record\"!");
+        return Err(1);
     }
 
     println!("{}", serde_json::to_string(&v).or_else(|_| Err(3))?);
