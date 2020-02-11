@@ -1,8 +1,12 @@
-// Guillaume Valadon <guillaume@valadon.net>
+// Copyright (C) 2020 Guillaume Valadon <guillaume@valadon.net>
 
 use std::fs::File;
 use std::io::prelude::*; // used to get the BufRead trait
 use std::io::BufReader;
+use std::path::Path;
+
+extern crate clap;
+use clap::{App, Arg};
 
 extern crate hex;
 use hex::FromHex;
@@ -143,7 +147,21 @@ fn parse_record(input: &str) -> Result<Record, RecordParsingError> {
 }
 
 fn main() -> Result<(), u8> {
-    let file = File::open("data/wikipedia.hex").unwrap();
+    let matches = App::new("xinto - parse & convert Intel hexadecimal object file format")
+        .arg(
+            Arg::with_name("HEX_FILENAME")
+                .help("hex file to convert")
+                .required(true),
+        )
+        .get_matches();
+
+    let filename = matches.value_of("HEX_FILENAME").unwrap();
+    if !Path::new(filename).is_file() {
+        eprintln!("Error: '{}' is not a valid file!", filename);
+        return Err(1);
+    }
+
+    let file = File::open(filename).unwrap();
     let buf_reader = BufReader::new(file);
 
     let mut v = vec![];
