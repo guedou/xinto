@@ -1,5 +1,10 @@
 // Copyright (C) 2020 Guillaume Valadon <guillaume@valadon.net>
 
+use std::fs::File;
+use std::io::prelude::*; // used to get the BufRead trait
+use std::io::BufReader;
+use std::path::Path;
+
 extern crate hex;
 use hex::FromHex;
 
@@ -135,5 +140,42 @@ impl Record {
                 .fold(0 as u32, |s, value| s as u32 + (*value as u32))
             + self.checksum as u32;
         sum.trailing_zeros() >= 8
+    }
+
+    pub fn from_file(filename: &str) -> Result<Vec<Record>, String> {
+        // Check if the file exists
+        if !Path::new(filename).is_file() {
+            return Err(format!("'{}' is not a valid file!", filename));
+        }
+
+        // Check if the file can be opened
+        let file = File::open(filename);
+        if file.is_err() {
+            return Err(format!("cannot open '{}'", filename));
+        }
+
+        let mut records = vec![];
+        let buf_reader = BufReader::new(file.unwrap());
+
+        for (line_number, line) in buf_reader.lines().enumerate().map(|(ln, l)| (ln + 1, l)) {
+            if line.is_err() {
+                return Err(format!("IO error at line {}: '{:?}'!", line_number, line));
+            }
+
+            let record = match Record::parse(&line.unwrap()) {
+                Ok(r) => r,
+                Err(RecordParsingError::MissingTag) => {
+                    eprintln!("Error at line {}: missing record mark!", line_number);
+                    break;
+                }
+                Err(e) => {
+                    eprintln!("Error at line {}: {:?}", line_number, e);
+                    break;
+                }
+            };
+
+            records.push(record);
+        }
+        Ok(records)
     }
 }
