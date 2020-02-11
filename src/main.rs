@@ -8,7 +8,7 @@ use std::path::Path;
 extern crate clap;
 use clap::{App, Arg};
 
-use xinto::{parse_record, Record, RecordParsingError};
+use xinto::{Record, RecordParsingError};
 
 fn main() -> Result<(), String> {
     // Parse command line arguments
@@ -41,7 +41,7 @@ fn main() -> Result<(), String> {
             return Err(format!("IO error at line {}: '{:?}'!", line_number, line));
         }
 
-        let record = match parse_record(&line.unwrap()) {
+        let record = match Record::parse(&line.unwrap()) {
             Ok(r) => r,
             Err(RecordParsingError::MissingTag) => {
                 eprintln!("Error at line {}: missing record mark!", line_number);
