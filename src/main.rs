@@ -10,7 +10,7 @@ use clap::{App, Arg};
 
 use xinto::{parse_record, Record, RecordParsingError};
 
-fn main() -> Result<(), u8> {
+fn main() -> Result<(), String> {
     // Parse command line arguments
     let matches = App::new("xinto - parse & convert Intel hexadecimal object file format")
         .arg(
@@ -23,35 +23,48 @@ fn main() -> Result<(), u8> {
     // Check if the file exists
     let filename = matches.value_of("HEX_FILENAME").unwrap();
     if !Path::new(filename).is_file() {
-        eprintln!("Error: '{}' is not a valid file!", filename);
-        return Err(1);
+        return Err(format!("'{}' is not a valid file!", filename));
     }
 
-    let file = File::open(filename).unwrap();
-    let buf_reader = BufReader::new(file);
+    // Check if the file can be opened
+    let file = File::open(filename);
+    if file.is_err() {
+        return Err(format!("cannot open '{}'", filename));
+    }
 
-    let mut v = vec![];
+    // Parse the file to extract hex records
+    let mut records = vec![];
+    let buf_reader = BufReader::new(file.unwrap());
+
     for (line_number, line) in buf_reader.lines().enumerate().map(|(ln, l)| (ln + 1, l)) {
+        if line.is_err() {
+            return Err(format!("IO error at line {}: '{:?}'!", line_number, line));
+        }
+
         let record = match parse_record(&line.unwrap()) {
             Ok(r) => r,
             Err(RecordParsingError::MissingTag) => {
                 eprintln!("Error at line {}: missing record mark!", line_number);
-                return Err(1);
+                break;
             }
             Err(e) => {
                 eprintln!("Error at line {}: {:?}", line_number, e);
-                return Err(1);
+                break;
             }
         };
-        v.push(record);
+
+        records.push(record);
     }
 
-    if !v.is_empty() && *v.last().unwrap() != Record::end_of_file() {
+    // Warn if the file format is incorrect
+    if !records.is_empty() && *records.last().unwrap() != Record::end_of_file() {
         eprintln!("Error: last record is not a \"End of File Record\"!");
-        return Err(1);
     }
 
-    println!("{}", serde_json::to_string(&v).or_else(|_| Err(3))?);
+    // Print parsed records as JSON
+    let json_document =
+        serde_json::to_string(&records).or_else(|_| Err("cannot convert to JSON!"))?;
+    println!("{}", json_document);
 
     Ok(())
 }
