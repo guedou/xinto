@@ -107,6 +107,8 @@ pub enum FileParsingError<'a> {
         error: RecordParsingError,
         line_number: usize,
     },
+    #[error(display = "last record is not an End of File Record")]
+    NoEOFRecord,
 }
 
 impl<'a> From<FileParsingError<'a>> for String {
@@ -216,6 +218,11 @@ impl Record {
                 .or_else(|error| Err(FileParsingError::RecordError { error, line_number }))?;
 
             records.push(record);
+        }
+
+        // Check that the file format is correct
+        if !records.is_empty() && *records.last().unwrap() != Record::end_of_file() {
+            return Err(FileParsingError::NoEOFRecord);
         }
 
         Ok(records)

@@ -26,11 +26,6 @@ fn main() -> Result<(), String> {
     let filename = matches.value_of("HEX_FILENAME").unwrap();
     let records = Record::from_file(filename)?;
 
-    // Warn if the file format is incorrect
-    if !records.is_empty() && *records.last().unwrap() != Record::end_of_file() {
-        eprintln!("Error: last record is not a \"End of File Record\"!");
-    }
-
     // Print parsed records as JSON
     let struct_to_json = match matches.is_present("pretty") {
         true => serde_json::to_string_pretty,
