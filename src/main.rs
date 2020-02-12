@@ -1,17 +1,24 @@
 // Copyright (C) 2020 Guillaume Valadon <guillaume@valadon.net>
 
 extern crate clap;
-use clap::{App, Arg};
+use clap::{crate_version, App, Arg};
 
 use xinto::Record;
 
 fn main() -> Result<(), String> {
     // Parse command line arguments
     let matches = App::new("xinto - parse & convert Intel hexadecimal object file format")
+        .version(&crate_version!()[..])
         .arg(
             Arg::with_name("HEX_FILENAME")
                 .help("hex file to convert")
                 .required(true),
+        )
+        .arg(
+            Arg::with_name("pretty")
+                .short("p")
+                .long("pretty")
+                .help("Pretty print the JSON output"),
         )
         .get_matches();
 
@@ -25,8 +32,11 @@ fn main() -> Result<(), String> {
     }
 
     // Print parsed records as JSON
-    let json_document =
-        serde_json::to_string(&records).or_else(|_| Err("cannot convert to JSON!"))?;
+    let struct_to_json = match matches.is_present("pretty") {
+        true => serde_json::to_string_pretty,
+        false => serde_json::to_string,
+    };
+    let json_document = struct_to_json(&records).or_else(|_| Err("cannot convert to JSON!"))?;
     println!("{}", json_document);
 
     Ok(())
