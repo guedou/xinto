@@ -82,7 +82,7 @@ pub enum RecordParsingError {
     ParseIntError,
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum FileParsingError<'a> {
     #[error(display = "'{}' is not a valid file", _0)]
     InvalidFile(&'a str),
@@ -201,6 +201,7 @@ impl Record {
 
             records.push(record);
         }
+
         Ok(records)
     }
 }
