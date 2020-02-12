@@ -28,6 +28,11 @@ fn parse_u8(input: &str) -> Result<(&str, u8), RecordParsingError> {
     if input.len() < size {
         return Err(RecordParsingError::TooSmall);
     }
+
+    if !input.is_char_boundary(size) {
+        return Err(RecordParsingError::NonASCIICharacter);
+    }
+
     Ok((
         &input[size..],
         u8_from_hex(&input[0..size]).or_else(|_| Err(RecordParsingError::ParseIntError))?,
@@ -39,6 +44,11 @@ fn parse_u16(input: &str) -> Result<(&str, u16), RecordParsingError> {
     if input.len() < size {
         return Err(RecordParsingError::TooSmall);
     }
+
+    if !input.is_char_boundary(size) {
+        return Err(RecordParsingError::NonASCIICharacter);
+    }
+
     Ok((
         &input[size..],
         u16_from_hex(&input[0..size]).or_else(|_| Err(RecordParsingError::ParseIntError))?,
@@ -58,6 +68,8 @@ pub struct Record {
 pub enum RecordParsingError {
     #[error(display = "record too small")]
     TooSmall,
+    #[error(display = "non ASCII character")]
+    NonASCIICharacter,
     #[error(display = "missing record mark")]
     MissingTag,
     #[error(display = "invalid length format")]
@@ -139,6 +151,10 @@ impl Record {
         let char_count: usize = length as usize * 2;
         if char_count > (input.len() - 2) {
             return Err(RecordParsingError::InvalidLength);
+        }
+
+        if !input.is_char_boundary(char_count) {
+            return Err(RecordParsingError::NonASCIICharacter);
         }
 
         let (input, data) = (&input[char_count..], &input[0..char_count]);
