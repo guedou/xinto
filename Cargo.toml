@@ -2,6 +2,10 @@
 name = "xinto"
 version = "0.2.0"
 authors = ["Guillaume Valadon <guillaume@valadon.net>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/guedou/xinto/"
+description = "Intel Hexadecimal Object File Format Parser"
 edition = "2018"
 
 [dependencies]
