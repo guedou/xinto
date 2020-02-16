@@ -27,9 +27,10 @@ fn main() -> Result<(), String> {
     let records = Record::from_file(filename)?;
 
     // Print parsed records as JSON
-    let struct_to_json = match matches.is_present("pretty") {
-        true => serde_json::to_string_pretty,
-        false => serde_json::to_string,
+    let struct_to_json = if matches.is_present("pretty") {
+        serde_json::to_string_pretty
+    } else {
+        serde_json::to_string
     };
     let json_document = struct_to_json(&records).or_else(|_| Err("cannot convert to JSON!"))?;
     println!("{}", json_document);
