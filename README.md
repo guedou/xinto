@@ -7,7 +7,7 @@ Written in Rust, `xinto` is a simple Intel Hex parser that outputs a JSON docume
 
 ## Demo
 
-![xinto demo](https://raw.githubusercontent.com/guedou/xinto/data/demo.svg)
+![xinto demo](https://raw.githubusercontent.com/guedou/xinto/master/data/demo.svg?sanitize=true)
 
 ## Installation
 
@@ -16,4 +16,4 @@ Written in Rust, `xinto` is a simple Intel Hex parser that outputs a JSON docume
 ## Specifications
 
 - https://en.wikipedia.org/wiki/Intel_HEX
-- https://archive.org/details/IntelHEXStandard/ ([local copy](https://github.com/guedou/xinto/blob/master/docs/Intel HEX Standard.pdf))
+- https://archive.org/details/IntelHEXStandard/ ([local copy](https://github.com/guedou/xinto/blob/master/docs/Intel%20HEX%20Standard.pdf))
